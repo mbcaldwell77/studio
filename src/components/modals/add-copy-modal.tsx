@@ -51,7 +51,7 @@ const copySchema = z.object({
       return parsed;
     })
     .pipe(z.number().nonnegative("Price cannot be negative.").nullable()),
-  purchaseDate: z.date().nullable(),
+  purchaseDate: z.date().nullable(), // Expects Date object, or null
   purchaseLocation: z.string().optional(),
   notes: z.string().optional(),
   isListed: z.boolean(),
@@ -67,8 +67,8 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
     resolver: zodResolver(copySchema),
     defaultValues: {
       isListed: false,
-      purchasePrice: '',
-      marketPrice: '',
+      purchasePrice: '', // Input field expects string
+      marketPrice: '',    // Input field expects string
       purchaseDate: null,
       purchaseLocation: '',
       notes: '',
@@ -91,6 +91,7 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
         isbn: book.isbn,
         condition,
       });
+      // Convert number to string for input field
       setValue('marketPrice', String(result.marketPrice.toFixed(2)), { shouldValidate: true });
     } catch (error) {
       console.error('Failed to suggest price:', error);
@@ -103,11 +104,12 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
   useEffect(() => {
     if (isOpen) {
       if (copy) {
+        // When editing an existing copy, populate form fields
         reset({
           condition: copy.condition,
           purchasePrice: copy.purchasePrice !== null && copy.purchasePrice !== undefined ? String(copy.purchasePrice) : '',
           marketPrice: copy.marketPrice !== null && copy.marketPrice !== undefined ? String(copy.marketPrice) : '',
-          purchaseDate: copy.purchaseDate,
+          purchaseDate: copy.purchaseDate, // purchaseDate is already a Date object or null
           purchaseLocation: copy.purchaseLocation,
           notes: copy.notes,
           isListed: copy.isListed,
@@ -131,6 +133,7 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
   // Re-suggest price when the user changes the condition
   useEffect(() => {
       if (isOpen && book && watchedCondition) {
+          // Only suggest if it's a new copy or if the condition has actually changed for an existing copy
           if (!copy || (copy && watchedCondition !== copy.condition)) {
              handleSuggestPrice(watchedCondition);
           }
@@ -138,6 +141,7 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
   }, [watchedCondition, isOpen, book, copy, handleSuggestPrice]);
   
   const financialMetrics = useMemo(() => {
+    // Parse values from string inputs to numbers for calculation
     const p = parseFloat(watchedPurchasePrice as string);
     const m = parseFloat(watchedMarketPrice as string);
 
@@ -156,13 +160,16 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
   const onSubmit = (data: CopyFormOutput) => {
     if (!book) return
     
+    // The data from the form is already in camelCase and matches the Copy type structure
     const newCopy: Copy = {
-      id: copy?.id || Date.now().toString(),
+      id: copy?.id || Date.now().toString(), // Use existing ID if editing, otherwise generate new
+      bookId: book.id, // Ensure bookId is set
       ...data,
-      purchasePrice: data.purchasePrice,
-      marketPrice: data.marketPrice,
+      purchasePrice: data.purchasePrice, // Already number or null from transform
+      marketPrice: data.marketPrice,     // Already number or null from transform
       purchaseLocation: data.purchaseLocation || '',
       notes: data.notes || '',
+      isListed: data.isListed,
     }
 
     onSave(book.id, newCopy)

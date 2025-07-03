@@ -80,8 +80,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // Helper to get cover image with OpenLibrary fallback
+// Uses book.coverUrl (camelCase) now
 function getBookCoverUrl(book: Book) {
-  if (book.cover_image_url) return book.cover_image_url;
+  if (book.coverUrl) return book.coverUrl; // Use camelCase property
   if (book.isbn)
     return `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`;
   return "https://placehold.co/64x96.png";
@@ -126,8 +127,7 @@ export default function CollectionPage() {
     try {
       setIsLoading(true);
       const fetchedBooks = await getBooks();
-      // Sort books by sortIndex on the client-side
-      fetchedBooks.sort((a, b) => a.sortIndex - b.sortIndex);
+      // Books are already sorted by sortIndex from the service layer
       setBooks(fetchedBooks);
     } catch (error) {
       console.error("Failed to fetch books:", error);
@@ -176,20 +176,20 @@ export default function CollectionPage() {
           case "year-oldest":
             return (a.year ?? 0) - (b.year ?? 0);
           default:
-            return 0;
+            return 0; // Should not happen with defined sort options
         }
       });
     } else {
-      // When sorting manually, use the original client-sorted books array
-      // but still apply search and filter
-      items = [...books];
+      // When sorting manually, use the original client-sorted books array (by sortIndex)
+      // but still apply search and filter. The initial fetch already sorts by sortIndex.
+      items = [...books]; // Start with the already sorted (by sortIndex) full list
       if (showListedOnly) {
         items = items
           .map((book) => {
-            const listedCopies = book.copies.filter((c) => c.isListed);
+            const listedCopies = (book.copies || []).filter((c) => c.isListed);
             return { ...book, copies: listedCopies };
           })
-          .filter((book) => book.copies.length > 0);
+          .filter((book) => (book.copies || []).length > 0);
       }
       if (searchTerm) {
         items = items.filter((book) =>
@@ -322,7 +322,7 @@ export default function CollectionPage() {
 
   const handleDeleteCopy = async (bookId: string, copyId: string) => {
     try {
-      await deleteCopy(bookId, copyId);
+      await deleteCopy(copyId); // deleteCopy only needs copyId
       await fetchBooks();
       toast({
         title: "Copy Deleted",
@@ -346,18 +346,20 @@ export default function CollectionPage() {
     const book = books.find((b) => b.id === bookId);
     if (!book) return;
 
-    const copy = book.copies.find((c) => c.id === copyId);
+    const copy = book.copies?.find((c) => c.id === copyId);
     if (!copy) return;
 
-    const updatedCopy = { ...copy, isListed };
+    // Create a new copy object with the updated isListed status
+    const updatedCopy: Copy = { ...copy, isListed };
 
     try {
-      await saveCopy(bookId, updatedCopy);
+      await saveCopy(bookId, updatedCopy); // Pass the camelCase copy object
+      // Optimistically update the UI
       const updatedBooks = books.map((b) =>
         b.id === bookId
           ? {
               ...b,
-              copies: b.copies.map((c) => (c.id === copyId ? updatedCopy : c)),
+              copies: (b.copies || []).map((c) => (c.id === copyId ? updatedCopy : c)),
             }
           : b
       );
@@ -373,6 +375,7 @@ export default function CollectionPage() {
   };
 
   const openAddCopy = (book: Book) => {
+    setIsDuplicateAdd(false); // Reset duplicate flag when opening for new copy
     setAddingCopyToBook(book);
     setEditingCopy(null);
     setAddCopyOpen(true);
@@ -406,7 +409,7 @@ export default function CollectionPage() {
         ? book.binding
         : "other",
       isbn: book.isbn,
-      cover_image_url: book.cover_image_url, // <-- fix coverUrl mismatch
+      coverUrl: book.coverUrl, // Use camelCase property
     });
     setManualAddOpen(true);
   };
@@ -430,10 +433,17 @@ export default function CollectionPage() {
       const newIndex = books.findIndex((item) => item.id === over.id);
 
       const reorderedBooks = arrayMove(books, oldIndex, newIndex);
-      setBooks(reorderedBooks); // Optimistic update
+      // Update sortIndex for all reordered books based on their new position
+      const booksWithNewSortIndex = reorderedBooks.map((book, idx) => ({
+        ...book,
+        sortIndex: idx,
+      }));
+
+      setBooks(booksWithNewSortIndex); // Optimistic update
 
       try {
-        await updateBookOrder(reorderedBooks);
+        // Pass only id and sortIndex for update
+        await updateBookOrder(booksWithNewSortIndex.map(b => ({ id: b.id, sortIndex: b.sortIndex })));
       } catch (error) {
         console.error("Failed to update book order:", error);
         toast({
@@ -451,7 +461,7 @@ export default function CollectionPage() {
     if (activeIsCopy && overIsCopy && active.id !== over.id) {
       const bookId = active.data.current?.bookId;
       const book = books.find((b) => b.id === bookId);
-      if (!book) return;
+      if (!book || !book.copies) return;
 
       const oldCopyIndex = book.copies.findIndex((c) => c.id === active.id);
       const newCopyIndex = book.copies.findIndex((c) => c.id === over.id);
@@ -462,15 +472,22 @@ export default function CollectionPage() {
         newCopyIndex
       );
 
+      // Update sortIndex for all reordered copies based on their new position
+      const copiesWithNewSortIndex = reorderedCopies.map((copy, idx) => ({
+        ...copy,
+        sortIndex: idx,
+      }));
+
       // Optimistic update
       setBooks((prev) =>
         prev.map((b) =>
-          b.id === bookId ? { ...b, copies: reorderedCopies } : b
+          b.id === bookId ? { ...b, copies: copiesWithNewSortIndex } : b
         )
       );
 
       try {
-        await updateCopiesOrder(bookId, reorderedCopies);
+        // Pass the full copies array with updated sortIndex
+        await updateCopiesOrder(bookId, copiesWithNewSortIndex);
       } catch (error) {
         console.error("Failed to update copy order:", error);
         toast({
@@ -517,7 +534,7 @@ export default function CollectionPage() {
 
             <div className="ml-4 relative flex-shrink-0">
               <Image
-                src={getBookCoverUrl(book)}
+                src={getBookCoverUrl(book)} // Uses book.coverUrl
                 alt={`Cover of ${book.title}`}
                 width={64}
                 height={96}
@@ -537,7 +554,7 @@ export default function CollectionPage() {
                 <span className="truncate">
                   {Array.isArray(book.authors)
                     ? book.authors.join(", ")
-                    : book.authors || ""}
+                    : ""}
                 </span>
                 <span className="truncate">{book.publisher || "N/A"}</span>
                 <div className="flex flex-wrap items-center gap-x-2">
@@ -701,7 +718,7 @@ export default function CollectionPage() {
               <p>
                 {copy.purchaseDate
                   ? copy.purchaseDate.toLocaleDateString()
-                  : ""}{" "}
+                  : "N/A"}{" "}
                 at {copy.purchaseLocation || "N/A"}
               </p>
             </div>

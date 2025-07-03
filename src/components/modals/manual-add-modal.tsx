@@ -29,6 +29,7 @@ import type { BookLookupOutput } from "@/ai/flows/lookup-book-flow";
 interface ManualAddModalProps {
   isOpen: boolean;
   onClose: () => void;
+  // The onSaveBook function now expects a Book object with camelCase properties
   onSaveBook: (
     book: Omit<Book, "id" | "copies" | "sortIndex">
   ) => Promise<void>;
@@ -36,10 +37,11 @@ interface ManualAddModalProps {
   isEditing?: boolean;
 }
 
-// In form schema and default values, use authors as string (for input), but convert to array for Book type
-const bookSchema = z.object({
+// Define the schema for the form input.
+// Note: authors is a string in the form, but will be converted to string[] for the Book type.
+const bookFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  authors: z.string().min(1, "At least one author is required"), // comma-separated in input
+  authors: z.string().min(1, "At least one author is required"), // comma-separated string from input
   year: z.preprocess(
     (val) => (val === "" ? null : Number(val)),
     z.number().nullable()
@@ -47,15 +49,10 @@ const bookSchema = z.object({
   publisher: z.string().optional(),
   binding: z.string().optional(),
   isbn: z.string().optional(),
-  cover_image_url: z.string().url().optional().or(z.literal("")),
-  sort_index: z
-    .preprocess(
-      (val) =>
-        val === undefined || val === null || val === "" ? 0 : Number(val),
-      z.number()
-    )
-    .optional(),
+  coverUrl: z.string().url().optional().or(z.literal("")), // Use camelCase here for the form
 });
+
+type BookFormInput = z.infer<typeof bookFormSchema>;
 
 export function ManualAddModal({
   isOpen,
@@ -71,17 +68,16 @@ export function ManualAddModal({
     control,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<z.infer<typeof bookSchema>>({
-    resolver: zodResolver(bookSchema),
+  } = useForm<BookFormInput>({
+    resolver: zodResolver(bookFormSchema),
     defaultValues: {
       binding: "Paperback",
-      cover_image_url: "https://placehold.co/300x450.png",
+      coverUrl: "https://placehold.co/300x450.png", // Use camelCase
       publisher: "",
       authors: "",
       title: "",
       isbn: "",
       year: new Date().getFullYear(),
-      sort_index: 0,
     },
   });
 
@@ -97,10 +93,8 @@ export function ManualAddModal({
             (initialData as any).year ??
             (initialData as any).publishedYear ??
             null,
-          cover_image_url:
-            initialData.coverUrl || "https://placehold.co/300x450.png",
+          coverUrl: initialData.coverUrl || "https://placehold.co/300x450.png", // Use camelCase
           publisher: initialData.publisher || "",
-          sort_index: (initialData as any).sort_index ?? 0,
         });
       } else {
         reset({
@@ -110,27 +104,30 @@ export function ManualAddModal({
           publisher: "",
           binding: "Paperback",
           isbn: "",
-          cover_image_url: "https://placehold.co/300x450.png",
-          sort_index: 0,
+          coverUrl: "https://placehold.co/300x450.png", // Use camelCase
         });
       }
     }
   }, [isOpen, initialData, reset]);
 
-  const onSubmit = async (data: z.infer<typeof bookSchema>) => {
+  const onSubmit = async (data: BookFormInput) => {
+    // Convert authors string from form to array for the Book type
     const authorsArray = data.authors
       .split(",")
       .map((a) => a.trim())
       .filter((a) => a.length > 0);
-    const bookToSave = {
-      ...data,
+
+    // Construct the Book object in camelCase, ready to be passed to the service layer
+    const bookToSave: Omit<Book, "id" | "copies" | "sortIndex"> = {
+      title: data.title,
       authors: authorsArray,
-      sort_index: data.sort_index ?? 0,
+      year: data.year,
       publisher: data.publisher ?? "",
       binding: data.binding ?? "",
       isbn: data.isbn ?? "",
-      cover_image_url: data.cover_image_url ?? "",
+      coverUrl: data.coverUrl ?? "", // Use camelCase
     };
+
     try {
       await onSaveBook(bookToSave);
       toast({
@@ -264,16 +261,16 @@ export function ManualAddModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cover_image_url">Cover Image URL</Label>
+            <Label htmlFor="coverUrl">Cover Image URL</Label>
             <Input
-              id="cover_image_url"
-              {...register("cover_image_url")}
+              id="coverUrl" // Use camelCase
+              {...register("coverUrl")} // Use camelCase
               placeholder="https://..."
               disabled={isSubmitting}
             />
-            {errors.cover_image_url && (
+            {errors.coverUrl && ( // Use camelCase
               <p className="text-sm text-destructive">
-                {errors.cover_image_url.message}
+                {errors.coverUrl.message}
               </p>
             )}
           </div>
