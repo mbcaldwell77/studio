@@ -127,7 +127,7 @@ export default function CollectionPage() {
       setIsLoading(true);
       const fetchedBooks = await getBooks();
       // Sort books by sortIndex on the client-side
-      fetchedBooks.sort((a, b) => a.sort_index - b.sort_index);
+      fetchedBooks.sort((a, b) => a.sortIndex - b.sortIndex);
       setBooks(fetchedBooks);
     } catch (error) {
       console.error("Failed to fetch books:", error);

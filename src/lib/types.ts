@@ -16,7 +16,8 @@ export type Copy = {
   bookId: string;
   condition: string;
   notes: string;
-  acquiredDate: string;
+  purchaseDate: string;
+  purchaseLocation?: string;
   sortIndex: number;
   purchasePrice?: number;
   marketPrice?: number;
