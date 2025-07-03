@@ -391,11 +391,22 @@ export default function CollectionPage() {
       authors: book.authors,
       publishedYear: book.year,
       publisher: book.publisher,
-      binding: (["Hardcover", "Paperback", "Trade PB/Uk-B", "Mass Market/UK-A", "UK-C", "Oversize/Softcover", "specialty binding", "other"] as const).includes(book.binding as any)
-        ? (book.binding as typeof book.binding)
+      binding: (
+        [
+          "Hardcover",
+          "Paperback",
+          "Trade PB/Uk-B",
+          "Mass Market/UK-A",
+          "UK-C",
+          "Oversize/Softcover",
+          "specialty binding",
+          "other",
+        ] as const
+      ).includes(book.binding)
+        ? book.binding
         : "other",
       isbn: book.isbn,
-      coverUrl: book.coverUrl,
+      cover_image_url: book.cover_image_url, // <-- fix coverUrl mismatch
     });
     setManualAddOpen(true);
   };
