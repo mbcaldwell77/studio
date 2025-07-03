@@ -6,18 +6,18 @@ export type Book = {
   publisher: string;
   binding: string;
   isbn: string;
-  cover_image_url: string;
-  sort_index: number;
+  coverUrl: string;
+  sortIndex: number;
   copies?: Copy[];
 };
 
 export type Copy = {
   id: string;
-  book_id: string;
+  bookId: string;
   condition: string;
   notes: string;
-  acquired_date: string;
-  sort_index: number;
+  acquiredDate: string;
+  sortIndex: number;
   purchasePrice?: number;
   marketPrice?: number;
   isListed?: boolean;
