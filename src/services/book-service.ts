@@ -29,17 +29,28 @@ const toSnakeCase = (obj: any) => {
   return newObj;
 };
 
+// Helper to convert authors array <-> string for DB
+const toDbBook = (book: Partial<Book>): any => ({
+  ...book,
+  authors: Array.isArray(book.authors)
+    ? book.authors.join(", ")
+    : book.authors || "",
+});
+const fromDbBook = (dbBook: any): Book => ({
+  ...dbBook,
+  authors:
+    typeof dbBook.authors === "string"
+      ? dbBook.authors
+          .split(",")
+          .map((a: string) => a.trim())
+          .filter(Boolean)
+      : [],
+});
+
 export async function getBooks(): Promise<Book[]> {
   const { data: booksData, error: booksError } = await supabase
     .from("books")
-    .select(
-      `
-      *,
-      inventory (
-        *
-      )
-    `
-    )
+    .select("*")
     .order("sort_index", { ascending: true });
 
   if (booksError) {
@@ -47,46 +58,16 @@ export async function getBooks(): Promise<Book[]> {
     throw new Error(booksError.message);
   }
 
-  return booksData.map((book: any) => {
-    const { inventory, ...bookDetails } = book;
-    const camelCasedBook = toCamelCase(bookDetails) as Omit<Book, "copies">;
-    const camelCasedCopies = inventory.map((copy: any) =>
-      toCamelCase(copy)
-    ) as Copy[];
-
-    return {
-      ...camelCasedBook,
-      copies: camelCasedCopies || [],
-    };
-  });
+  return (booksData || []).map(fromDbBook);
 }
 
 export async function addBook(
   book: Omit<Book, "id" | "copies">
 ): Promise<Book> {
-  // Get the highest sort_index
-  const { data: maxSortIndexData, error: maxSortIndexError } = await supabase
-    .from("books")
-    .select("sort_index")
-    .order("sort_index", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (maxSortIndexError && maxSortIndexError.code !== "PGRST116") {
-    // Ignore 'exact one row' error if no books exist
-    throw new Error(maxSortIndexError.message);
-  }
-
-  const newSortIndex = (maxSortIndexData?.sort_index ?? -1) + 1;
-
-  const bookToInsert = {
-    ...toSnakeCase(book),
-    sort_index: newSortIndex,
-  };
-
+  const dbBook = toDbBook(book);
   const { data, error } = await supabase
     .from("books")
-    .insert(bookToInsert)
+    .insert(dbBook)
     .select()
     .single();
 
@@ -95,16 +76,17 @@ export async function addBook(
     throw new Error(error.message);
   }
 
-  return { ...(toCamelCase(data) as Omit<Book, "copies">), copies: [] };
+  return fromDbBook(data);
 }
 
 export async function updateBookDetails(
   bookId: string,
   details: Partial<Omit<Book, "id" | "copies">>
 ): Promise<void> {
+  const dbDetails = toDbBook(details);
   const { error } = await supabase
     .from("books")
-    .update(toSnakeCase(details))
+    .update(dbDetails)
     .eq("id", bookId);
 
   if (error) {
@@ -147,11 +129,11 @@ export async function deleteBook(bookId: string): Promise<void> {
 }
 
 export async function updateBookOrder(
-  books: Pick<Book, "id" | "sortIndex">[]
+  books: Pick<Book, "id" | "sort_index">[]
 ): Promise<void> {
   const updates = books.map((book) => ({
     id: book.id,
-    sort_index: book.sortIndex,
+    sort_index: book.sort_index,
   }));
 
   const { error } = await supabase.from("books").upsert(updates);

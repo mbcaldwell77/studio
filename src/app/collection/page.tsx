@@ -119,7 +119,7 @@ export default function CollectionPage() {
       setIsLoading(true);
       const fetchedBooks = await getBooks();
       // Sort books by sortIndex on the client-side
-      fetchedBooks.sort((a, b) => a.sortIndex - b.sortIndex);
+      fetchedBooks.sort((a, b) => a.sort_index - b.sort_index);
       setBooks(fetchedBooks);
     } catch (error) {
       console.error("Failed to fetch books:", error);
@@ -494,7 +494,7 @@ export default function CollectionPage() {
 
             <div className="ml-4 relative flex-shrink-0">
               <Image
-                src={book.coverUrl || "https://placehold.co/64x96.png"}
+                src={book.cover_image_url || "https://placehold.co/64x96.png"}
                 alt={`Cover of ${book.title}`}
                 width={64}
                 height={96}
@@ -533,8 +533,10 @@ export default function CollectionPage() {
                   variant="secondary"
                   className="px-2 py-1 text-xs whitespace-nowrap"
                 >
-                  {book.copies.length}{" "}
-                  {book.copies.length === 1 ? "Copy" : "Copies"}
+                  {Array.isArray(book.copies) ? book.copies.length : 0}{" "}
+                  {Array.isArray(book.copies) && book.copies.length === 1
+                    ? "Copy"
+                    : "Copies"}
                 </Badge>
                 <div className="flex items-center">
                   <Button
@@ -592,7 +594,7 @@ export default function CollectionPage() {
             <div className="border-t border-border pt-4 mt-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="font-headline text-lg font-semibold">
-                  Copies ({book.copies.length})
+                  Copies ({(book.copies || []).length})
                 </h4>
                 <Button
                   variant="outline"
@@ -604,12 +606,12 @@ export default function CollectionPage() {
                 </Button>
               </div>
               <div className="space-y-4">
-                {book.copies.length > 0 ? (
+                {(book.copies || []).length > 0 ? (
                   <SortableContext
-                    items={book.copies.map((c) => c.id)}
+                    items={(book.copies || []).map((c) => c.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {book.copies.map((copy) => (
+                    {(book.copies || []).map((copy) => (
                       <SortableCopyItem key={copy.id} book={book} copy={copy} />
                     ))}
                   </SortableContext>

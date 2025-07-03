@@ -1,23 +1,23 @@
 export type Book = {
   id: string;
   title: string;
-  authors: string[];
-  publishedYear: number | null;
-  isbn: string;
+  authors: string[]; // UI uses array, DB stores as comma-separated string
+  year: number | null;
   publisher: string;
-  binding: 'Hardcover' | 'Paperback' | 'Trade PB/Uk-B' | 'Mass Market/UK-A' | 'UK-C' | 'Oversize/Softcover' | 'specialty binding' | 'other';
-  coverUrl: string;
-  copies: Copy[];
-  sortIndex: number;
+  binding: string;
+  isbn: string;
+  cover_image_url: string;
+  sort_index: number;
+  copies?: Copy[];
 };
 
 export type Copy = {
   id: string;
-  condition: 'Brand New' | 'Like New' | 'Very Good' | 'Good' | 'Acceptable';
-  purchasePrice: number | null;
-  marketPrice: number | null;
-  purchaseDate: Date | null;
-  purchaseLocation: string;
+  book_id: string;
+  condition: string;
   notes: string;
-  isListed: boolean;
+  acquired_date: string;
+  sort_index: number;
+  purchasePrice?: number;
+  marketPrice?: number;
 };

@@ -36,41 +36,18 @@ interface ManualAddModalProps {
   isEditing?: boolean;
 }
 
+// In form schema and default values, use authors as string (for input), but convert to array for Book type
 const bookSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  authors: z.string().min(1, "Author is required"),
-  publishedYear: z.preprocess(
-    (val) => (String(val).trim() === "" ? null : Number(val)),
-    z.number().int().min(1000).max(new Date().getFullYear()).nullable()
+  authors: z.string().min(1, "At least one author is required"), // comma-separated in input
+  year: z.preprocess(
+    (val) => (val === "" ? null : Number(val)),
+    z.number().nullable()
   ),
   publisher: z.string().optional(),
-  binding: z.enum([
-    "Hardcover",
-    "Paperback",
-    "Trade PB/Uk-B",
-    "Mass Market/UK-A",
-    "UK-C",
-    "Oversize/Softcover",
-    "specialty binding",
-    "other",
-  ]),
-  isbn: z
-    .string()
-    .transform((val) => val.replace(/[-/]/g, ""))
-    .refine(
-      (val) => {
-        if (val.toUpperCase() === "NA") return true;
-        return (
-          (val.length === 10 && /^[0-9]{9}[0-9X]$/i.test(val)) ||
-          (val.length === 13 && /^[0-9]{13}$/.test(val))
-        );
-      },
-      {
-        message:
-          "Invalid ISBN. Must be 10 or 13 digits (X is allowed), or 'N/A'.",
-      }
-    ),
-  coverUrl: z.string().url().optional().or(z.literal("")),
+  binding: z.string().optional(),
+  isbn: z.string().optional(),
+  cover_image_url: z.string().url().optional().or(z.literal("")),
 });
 
 export function ManualAddModal({
@@ -91,51 +68,53 @@ export function ManualAddModal({
     resolver: zodResolver(bookSchema),
     defaultValues: {
       binding: "Paperback",
-      coverUrl: "https://placehold.co/300x450.png",
+      cover_image_url: "https://placehold.co/300x450.png",
       publisher: "",
       authors: "",
       title: "",
       isbn: "",
-      publishedYear: new Date().getFullYear(),
+      year: new Date().getFullYear(),
     },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
+        // When loading initialData, convert comma-separated string to input value
         reset({
           ...initialData,
           authors: Array.isArray(initialData.authors)
             ? initialData.authors.join(", ")
             : initialData.authors || "",
           publisher: initialData.publisher || "",
-          publishedYear: initialData.publishedYear ?? null,
-          coverUrl: initialData.coverUrl || "https://placehold.co/300x450.png",
+          year: initialData.year ?? null,
+          cover_image_url:
+            initialData.cover_image_url || "https://placehold.co/300x450.png",
         });
       } else {
         reset({
           title: "",
           authors: "",
-          publishedYear: null,
+          year: null,
           publisher: "",
           binding: "Paperback",
           isbn: "",
-          coverUrl: "https://placehold.co/300x450.png",
+          cover_image_url: "https://placehold.co/300x450.png",
         });
       }
     }
   }, [isOpen, initialData, reset]);
 
   const onSubmit = async (data: z.infer<typeof bookSchema>) => {
-    const newBookData = {
+    // When submitting, convert authors string to array for Book type, then join for DB
+    const bookToSave = {
       ...data,
-      authors: data.authors.split(",").map((a) => a.trim()),
-      coverUrl: data.coverUrl || "https://placehold.co/300x450.png",
-      publisher: data.publisher || "",
-      publishedYear: data.publishedYear,
+      authors: data.authors.split(",").map((a) => a.trim()), // for Book type
+      // For DB, join authors array to comma-separated string
+      authors_db: data.authors, // for DB insert/update
     };
     try {
-      await onSaveBook(newBookData);
+      await onSaveBook(bookToSave);
       toast({
         title: isEditing ? "Book updated!" : "Book added!",
         description: `"${data.title}" has been saved.`,
@@ -190,17 +169,17 @@ export function ManualAddModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="publishedYear">Year</Label>
+              <Label htmlFor="year">Year</Label>
               <Input
-                id="publishedYear"
+                id="year"
                 type="text"
-                {...register("publishedYear")}
+                {...register("year")}
                 placeholder="e.g. 1965"
                 disabled={isSubmitting}
               />
-              {errors.publishedYear && (
+              {errors.year && (
                 <p className="text-sm text-destructive">
-                  {errors.publishedYear.message}
+                  {errors.year.message}
                 </p>
               )}
             </div>
@@ -267,16 +246,16 @@ export function ManualAddModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="coverUrl">Cover Image URL</Label>
+            <Label htmlFor="cover_image_url">Cover Image URL</Label>
             <Input
-              id="coverUrl"
-              {...register("coverUrl")}
+              id="cover_image_url"
+              {...register("cover_image_url")}
               placeholder="https://..."
               disabled={isSubmitting}
             />
-            {errors.coverUrl && (
+            {errors.cover_image_url && (
               <p className="text-sm text-destructive">
-                {errors.coverUrl.message}
+                {errors.cover_image_url.message}
               </p>
             )}
           </div>
