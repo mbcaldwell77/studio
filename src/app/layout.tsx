@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next"; // Added for Vercel Analytics
 
 export const metadata: Metadata = {
   title: "ScryVault",
@@ -31,8 +29,6 @@ export default function RootLayout({
       <body className="font-body antialiased">
         {children}
         <Toaster />
-        <Analytics />
-        <SpeedInsights /> {/* Added for Vercel Analytics */}
       </body>
     </html>
   );
