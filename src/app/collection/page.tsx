@@ -151,7 +151,9 @@ export default function CollectionPage() {
     if (showListedOnly) {
       items = items
         .map((book) => {
-          const listedCopies = book.copies.filter((c) => c.isListed);
+          const listedCopies = Array.isArray(book.copies)
+            ? book.copies.filter((c) => c.isListed)
+            : [];
           return { ...book, copies: listedCopies };
         })
         .filter((book) => book.copies.length > 0);
@@ -170,9 +172,9 @@ export default function CollectionPage() {
           case "title-desc":
             return b.title.localeCompare(a.title);
           case "year-newest":
-            return (b.publishedYear ?? 0) - (a.publishedYear ?? 0);
+            return (b.year ?? 0) - (a.year ?? 0);
           case "year-oldest":
-            return (a.publishedYear ?? 0) - (b.publishedYear ?? 0);
+            return (a.year ?? 0) - (b.year ?? 0);
           default:
             return 0;
         }
@@ -387,9 +389,11 @@ export default function CollectionPage() {
     setInitialBookData({
       title: book.title,
       authors: book.authors,
-      publishedYear: book.publishedYear,
+      publishedYear: book.year,
       publisher: book.publisher,
-      binding: book.binding,
+      binding: (["Hardcover", "Paperback", "Trade PB/Uk-B", "Mass Market/UK-A", "UK-C", "Oversize/Softcover", "specialty binding", "other"] as const).includes(book.binding as any)
+        ? (book.binding as typeof book.binding)
+        : "other",
       isbn: book.isbn,
       coverUrl: book.coverUrl,
     });

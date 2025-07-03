@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Html5Qrcode } from "html5-qrcode"
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -39,7 +39,7 @@ export function ScannerModal({ isOpen, onClose, onScan }: ScannerModalProps) {
     const config = {
       fps: 10,
       qrbox: { width: 250, height: 150 },
-      formatsToSupport: [Html5Qrcode.SupportedFormats.EAN_13],
+      formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13],
     }
 
     Html5Qrcode.getCameras()

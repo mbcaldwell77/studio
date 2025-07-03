@@ -20,4 +20,5 @@ export type Copy = {
   sort_index: number;
   purchasePrice?: number;
   marketPrice?: number;
+  isListed?: boolean;
 };
