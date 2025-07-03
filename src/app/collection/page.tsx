@@ -79,6 +79,14 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+// Helper to get cover image with OpenLibrary fallback
+function getBookCoverUrl(book: Book) {
+  if (book.cover_image_url) return book.cover_image_url;
+  if (book.isbn)
+    return `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg`;
+  return "https://placehold.co/64x96.png";
+}
+
 export default function CollectionPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -494,7 +502,7 @@ export default function CollectionPage() {
 
             <div className="ml-4 relative flex-shrink-0">
               <Image
-                src={book.cover_image_url || "https://placehold.co/64x96.png"}
+                src={getBookCoverUrl(book)}
                 alt={`Cover of ${book.title}`}
                 width={64}
                 height={96}
@@ -519,10 +527,10 @@ export default function CollectionPage() {
                 <span className="truncate">{book.publisher || "N/A"}</span>
                 <div className="flex flex-wrap items-center gap-x-2">
                   <span>{book.binding}</span>
-                  {book.publishedYear && (
+                  {book.year && (
                     <span className="text-muted-foreground">&bull;</span>
                   )}
-                  {book.publishedYear && <span>{book.publishedYear}</span>}
+                  {book.year && <span>{book.year}</span>}
                 </div>
               </div>
             </div>
@@ -678,7 +686,7 @@ export default function CollectionPage() {
               <p>
                 {copy.purchaseDate
                   ? copy.purchaseDate.toLocaleDateString()
-                  : "N/A"}{" "}
+                  : ""}{" "}
                 at {copy.purchaseLocation || "N/A"}
               </p>
             </div>
@@ -749,7 +757,7 @@ export default function CollectionPage() {
             </Label>
             <Switch
               id={`listed-${copy.id}`}
-              checked={copy.isListed}
+              checked={copy.isListed ?? false}
               onCheckedChange={(checked) =>
                 handleToggleListed(book.id, copy.id, checked)
               }

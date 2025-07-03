@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -10,22 +10,34 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "placehold.co",
+        port: "",
+        pathname: "/**",
       },
       {
-        protocol: 'http',
-        hostname: 'books.google.com',
-        port: '',
-        pathname: '/**',
+        protocol: "http",
+        hostname: "books.google.com",
+        port: "",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'books.google.com',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "books.google.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "covers.openlibrary.org",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "books.googleusercontent.com",
+        port: "",
+        pathname: "/**",
       },
     ],
   },
@@ -35,7 +47,7 @@ const nextConfig: NextConfig = {
       // This bypasses the strict origin/x-forwarded-host check for this specific domain.
       // Add other development URLs here if needed (e.g., other Codespaces names, local IP).
       allowedOrigins: [
-        'https://crispy-computing-machine-r5r59p5564pcwqp4-9002.app.github.dev',
+        "https://crispy-computing-machine-r5r59p5564pcwqp4-9002.app.github.dev",
       ],
     },
   },
