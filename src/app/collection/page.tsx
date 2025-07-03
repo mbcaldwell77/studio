@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
@@ -352,7 +351,7 @@ export default function CollectionPage() {
                 <h3 className="font-headline text-lg font-bold leading-tight">{book.title}</h3>
                 <p className="text-sm font-semibold text-primary">ISBN: {book.isbn}</p>
                 <div className="mt-2 flex flex-col gap-y-1 text-xs text-muted-foreground">
-                  <span className="truncate">{book.authors.join(', ')}</span>
+                  <span className="truncate">{Array.isArray(book.authors) ? book.authors.join(', ') : (book.authors || '')}</span>
                   <span className="truncate">{book.publisher || 'N/A'}</span>
                   <div className="flex flex-wrap items-center gap-x-2">
                     <span>{book.binding}</span>

@@ -60,7 +60,7 @@ export function ManualAddModal({ isOpen, onClose, onSaveBook, initialData, isEdi
       if (initialData) {
         reset({
           ...initialData,
-          authors: initialData.authors.join(', '),
+          authors: Array.isArray(initialData.authors) ? initialData.authors.join(', ') : (initialData.authors || ''),
           publisher: initialData.publisher || '',
           publishedYear: initialData.publishedYear ?? null,
           coverUrl: initialData.coverUrl || 'https://placehold.co/300x450.png'
