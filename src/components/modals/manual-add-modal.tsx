@@ -48,6 +48,13 @@ const bookSchema = z.object({
   binding: z.string().optional(),
   isbn: z.string().optional(),
   cover_image_url: z.string().url().optional().or(z.literal("")),
+  sort_index: z
+    .preprocess(
+      (val) =>
+        val === undefined || val === null || val === "" ? 0 : Number(val),
+      z.number()
+    )
+    .optional(),
 });
 
 export function ManualAddModal({
@@ -74,25 +81,26 @@ export function ManualAddModal({
       title: "",
       isbn: "",
       year: new Date().getFullYear(),
+      sort_index: 0,
     },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // When loading initialData, convert comma-separated string to input value
         reset({
           ...initialData,
           authors: Array.isArray(initialData.authors)
             ? initialData.authors.join(", ")
             : initialData.authors || "",
-          year: initialData.year ?? initialData.publishedYear ?? null,
+          year:
+            (initialData as any).year ??
+            (initialData as any).publishedYear ??
+            null,
           cover_image_url:
-            initialData.cover_image_url ||
-            initialData.coverUrl ||
-            "https://placehold.co/300x450.png",
+            initialData.coverUrl || "https://placehold.co/300x450.png",
           publisher: initialData.publisher || "",
-          // sort_index is not needed in the form, so we don't map it here
+          sort_index: (initialData as any).sort_index ?? 0,
         });
       } else {
         reset({
@@ -103,22 +111,25 @@ export function ManualAddModal({
           binding: "Paperback",
           isbn: "",
           cover_image_url: "https://placehold.co/300x450.png",
+          sort_index: 0,
         });
       }
     }
   }, [isOpen, initialData, reset]);
 
   const onSubmit = async (data: z.infer<typeof bookSchema>) => {
-    // When submitting, convert authors string to array for Book type, then join for DB
+    const authorsArray = data.authors
+      .split(",")
+      .map((a) => a.trim())
+      .filter((a) => a.length > 0);
     const bookToSave = {
-      title: data.title,
-      authors: data.authors.split(",").map((a) => a.trim()),
-      year: data.year,
-      publisher: data.publisher || "",
-      binding: data.binding || "",
-      isbn: data.isbn || "",
-      cover_image_url: data.cover_image_url || "",
-      sort_index: typeof data.sort_index === "number" ? data.sort_index : 0,
+      ...data,
+      authors: authorsArray,
+      sort_index: data.sort_index ?? 0,
+      publisher: data.publisher ?? "",
+      binding: data.binding ?? "",
+      isbn: data.isbn ?? "",
+      cover_image_url: data.cover_image_url ?? "",
     };
     try {
       await onSaveBook(bookToSave);
