@@ -1,2 +1,1 @@
-// This file is no longer used. Authentication has been removed.
-export default {};
+// Removed: Firebase Admin. No longer used.
