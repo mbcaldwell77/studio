@@ -1,0 +1,43 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Logs & debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+logs/
+
+# Environment files
+.env
+.env.* 
+!.env.example
+
+# Coverage
+coverage/
+*.lcov
+
+# OS & Editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+.pnp/
+.pnp.js
+docker-compose.override.yml
+*.sqlite*
+*.db

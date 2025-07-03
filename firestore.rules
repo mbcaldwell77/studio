@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // This single rule matches any document in any user's 'books' 
+    // subcollection.
+    match /users/{userId}/books/{bookId} {
+      // It allows all read (get, list) and write (create, update, delete) 
+      // operations if the requesting user is authenticated and their UID 
+      // matches the {userId} in the document path.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
