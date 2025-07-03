@@ -86,10 +86,13 @@ export function ManualAddModal({
           authors: Array.isArray(initialData.authors)
             ? initialData.authors.join(", ")
             : initialData.authors || "",
-          publisher: initialData.publisher || "",
-          year: initialData.year ?? null,
+          year: initialData.year ?? initialData.publishedYear ?? null,
           cover_image_url:
-            initialData.cover_image_url || "https://placehold.co/300x450.png",
+            initialData.cover_image_url ||
+            initialData.coverUrl ||
+            "https://placehold.co/300x450.png",
+          publisher: initialData.publisher || "",
+          // sort_index is not needed in the form, so we don't map it here
         });
       } else {
         reset({
@@ -108,10 +111,14 @@ export function ManualAddModal({
   const onSubmit = async (data: z.infer<typeof bookSchema>) => {
     // When submitting, convert authors string to array for Book type, then join for DB
     const bookToSave = {
-      ...data,
-      authors: data.authors.split(",").map((a) => a.trim()), // for Book type
-      // For DB, join authors array to comma-separated string
-      authors_db: data.authors, // for DB insert/update
+      title: data.title,
+      authors: data.authors.split(",").map((a) => a.trim()),
+      year: data.year,
+      publisher: data.publisher || "",
+      binding: data.binding || "",
+      isbn: data.isbn || "",
+      cover_image_url: data.cover_image_url || "",
+      sort_index: typeof data.sort_index === "number" ? data.sort_index : 0,
     };
     try {
       await onSaveBook(bookToSave);
