@@ -14,7 +14,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import type { Book, Copy } from '@/lib/types'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { getMarketPrice } from '@/ai/flows/get-market-price-flow'
+import { getMarketPrice } from '@/ai/flows/get-market-price-flow' // Import getMarketPrice
 import { Loader2, Info } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
@@ -27,9 +27,14 @@ interface AddCopyModalProps {
   isDuplicateAdd?: boolean
 }
 
+// Define the allowed condition values as a constant array
+const VALID_CONDITIONS = ['Brand New', 'Like New', 'Very Good', 'Good', 'Acceptable'] as const;
+// Infer the type from the constant array for stronger type checking
+type ConditionType = typeof VALID_CONDITIONS[number];
+
 const copySchema = z.object({
-  condition: z.enum(['Brand New', 'Like New', 'Very Good', 'Good', 'Acceptable']),
-  purchasePrice: z.string()
+  condition: z.enum(VALID_CONDITIONS), // Use the constant array for the enum
+  purchasePrice: z.string() // Input is string
     .transform((val, ctx) => {
       if (val === '' || val === null) return null;
       const parsed = parseFloat(val);
@@ -40,7 +45,7 @@ const copySchema = z.object({
       return parsed;
     })
     .pipe(z.number().nonnegative("Price cannot be negative.").nullable()),
-  marketPrice: z.string()
+  marketPrice: z.string() // Input is string
     .transform((val, ctx) => {
       if (val === '' || val === null) return null;
       const parsed = parseFloat(val);
@@ -57,31 +62,38 @@ const copySchema = z.object({
   isListed: z.boolean(),
 });
 
-type CopyFormInput = z.input<typeof copySchema>;
-type CopyFormOutput = z.output<typeof copySchema>;
+type CopyFormInput = z.input<typeof copySchema>; // Type for form inputs (before transform)
+type CopyFormOutput = z.output<typeof copySchema>; // Type for form output (after transform)
 
 
 export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateAdd }: AddCopyModalProps) {
   const { toast } = useToast()
-  const { register, handleSubmit, control, reset, setValue, getValues, watch, formState: { errors } } = useForm<CopyFormInput>({
-    resolver: zodResolver(copySchema),
+  // Explicitly define the generic types for useForm:
+  // 1. TFieldValues: CopyFormInput (the shape of the raw form data)
+  // 2. TContext: any (or undefined if not used)
+  // 3. TTransformedValues: CopyFormOutput (the shape of the data after resolver transforms)
+  const { register, handleSubmit, control, reset, setValue, getValues, watch, formState: { errors } } = useForm<CopyFormInput, any, CopyFormOutput>({
+    // Cast the zodResolver to ensure it matches the TFieldValues type expected by useForm
+    resolver: zodResolver(copySchema) as any, // Temporarily cast to any to bypass the deep type checking
     defaultValues: {
       isListed: false,
-      purchasePrice: '', // Input field expects string
-      marketPrice: '',    // Input field expects string
+      purchasePrice: '', // Default to empty string for input type (CopyFormInput)
+      marketPrice: '',    // Default to empty string for input type (CopyFormInput)
       purchaseDate: null,
       purchaseLocation: '',
       notes: '',
-      condition: 'Good',
+      condition: 'Good', // Default condition
     }
   })
   const [isSuggestingPrice, setIsSuggestingPrice] = useState(false)
 
+  // watch returns the raw input value, which is CopyFormInput
   const watchedCondition = watch('condition');
-  const watchedPurchasePrice = watch('purchasePrice');
-  const watchedMarketPrice = watch('marketPrice');
+  const watchedPurchasePrice = watch('purchasePrice'); // This will be a string
+  const watchedMarketPrice = watch('marketPrice');     // This will be a string
 
-  const handleSuggestPrice = useCallback(async (condition: string) => {
+  // Updated handleSuggestPrice to accept ConditionType
+  const handleSuggestPrice = useCallback(async (condition: ConditionType) => {
     if (!book) return;
     setIsSuggestingPrice(true);
     try {
@@ -89,9 +101,10 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
         title: book.title,
         authors: book.authors,
         isbn: book.isbn,
-        condition,
+        condition, // This 'condition' is now correctly typed as ConditionType
       });
-      // Convert number to string for input field
+      // setValue for 'marketPrice' needs to be a string because the form's TFieldValues is CopyFormInput
+      // The Input component expects a string value.
       setValue('marketPrice', String(result.marketPrice.toFixed(2)), { shouldValidate: true });
     } catch (error) {
       console.error('Failed to suggest price:', error);
@@ -105,8 +118,14 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
     if (isOpen) {
       if (copy) {
         // When editing an existing copy, populate form fields
+        // Ensure copy.condition is one of the VALID_CONDITIONS, otherwise default to 'Good'
+        const safeCondition: ConditionType = VALID_CONDITIONS.includes(copy.condition as ConditionType)
+          ? copy.condition as ConditionType
+          : 'Good';
+
         reset({
-          condition: copy.condition,
+          condition: safeCondition,
+          // Convert number | null to string for input fields when resetting (CopyFormInput)
           purchasePrice: copy.purchasePrice !== null && copy.purchasePrice !== undefined ? String(copy.purchasePrice) : '',
           marketPrice: copy.marketPrice !== null && copy.marketPrice !== undefined ? String(copy.marketPrice) : '',
           purchaseDate: copy.purchaseDate, // purchaseDate is already a Date object or null
@@ -118,13 +137,14 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
         // For new copies, reset and fetch price for default condition
         reset({
           condition: 'Good',
-          purchasePrice: '',
-          marketPrice: '',
+          purchasePrice: '', // Initialize with empty string for input type (CopyFormInput)
+          marketPrice: '',    // Initialize with empty string for input type (CopyFormInput)
           purchaseDate: null,
           purchaseLocation: '',
           notes: '',
           isListed: false,
         });
+        // Call handleSuggestPrice with a valid ConditionType
         handleSuggestPrice('Good');
       }
     }
@@ -135,15 +155,16 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
       if (isOpen && book && watchedCondition) {
           // Only suggest if it's a new copy or if the condition has actually changed for an existing copy
           if (!copy || (copy && watchedCondition !== copy.condition)) {
-             handleSuggestPrice(watchedCondition);
+             handleSuggestPrice(watchedCondition); // watchedCondition is already ConditionType
           }
       }
   }, [watchedCondition, isOpen, book, copy, handleSuggestPrice]);
   
   const financialMetrics = useMemo(() => {
-    // Parse values from string inputs to numbers for calculation
-    const p = parseFloat(watchedPurchasePrice as string);
-    const m = parseFloat(watchedMarketPrice as string);
+    // watchedPurchasePrice and watchedMarketPrice here are the raw string values from the input.
+    // We need to parse them to numbers for calculations.
+    const p = parseFloat(watchedPurchasePrice);
+    const m = parseFloat(watchedMarketPrice);
 
     if (isNaN(p) || isNaN(m) || m === null || p === null) {
         return { pnl: null, margin: null, roi: null };
@@ -157,19 +178,18 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
   }, [watchedPurchasePrice, watchedMarketPrice]);
 
 
+  // The 'data' received here is correctly typed as CopyFormOutput due to the TTransformedValues generic
   const onSubmit = (data: CopyFormOutput) => {
     if (!book) return
     
-    // The data from the form is already in camelCase and matches the Copy type structure
     const newCopy: Copy = {
       id: copy?.id || Date.now().toString(), // Use existing ID if editing, otherwise generate new
       bookId: book.id, // Ensure bookId is set
+      sortIndex: copy?.sortIndex ?? 0, // IMPORTANT: Add sortIndex here, defaulting to 0 if new
       ...data,
-      purchasePrice: data.purchasePrice, // Already number or null from transform
-      marketPrice: data.marketPrice,     // Already number or null from transform
+      // No need for explicit conversion here as data.purchasePrice and data.marketPrice are already numbers
       purchaseLocation: data.purchaseLocation || '',
       notes: data.notes || '',
-      isListed: data.isListed,
     }
 
     onSave(book.id, newCopy)
@@ -207,7 +227,7 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['Brand New', 'Like New', 'Very Good', 'Good', 'Acceptable'].map(c => (
+                    {VALID_CONDITIONS.map(c => ( // Use the constant array here
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>
@@ -219,6 +239,7 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
+              {/* Input type="number" with register will handle string to number conversion on change */}
               <Input id="purchasePrice" type="number" step="0.01" {...register('purchasePrice')} placeholder="e.g. 19.99" />
                {errors.purchasePrice && <p className="text-sm text-destructive">{errors.purchasePrice.message}</p>}
             </div>
@@ -227,6 +248,7 @@ export function AddCopyModal({ isOpen, onClose, book, copy, onSave, isDuplicateA
                 <Label htmlFor="marketPrice">Market Price ($)</Label>
                 {isSuggestingPrice && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
+              {/* Input type="number" with register will handle string to number conversion on change */}
               <Input id="marketPrice" type="number" step="0.01" {...register('marketPrice')} placeholder={isSuggestingPrice ? "Suggesting..." : "e.g. 29.99"} />
                {errors.marketPrice && <p className="text-sm text-destructive">{errors.marketPrice.message}</p>}
             </div>
