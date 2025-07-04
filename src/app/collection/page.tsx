@@ -88,6 +88,19 @@ function getBookCoverUrl(book: Book) {
   return "https://placehold.co/64x96.png";
 }
 
+// Define the allowed binding types as a constant array
+const VALID_BINDINGS = [
+  "Hardcover",
+  "Paperback",
+  "Trade PB/Uk-B",
+  "Mass Market/UK-A",
+  "UK-C",
+  "Oversize/Softcover",
+  "specialty binding",
+  "other",
+] as const;
+type BindingType = (typeof VALID_BINDINGS)[number];
+
 export default function CollectionPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -359,7 +372,9 @@ export default function CollectionPage() {
         b.id === bookId
           ? {
               ...b,
-              copies: (b.copies || []).map((c) => (c.id === copyId ? updatedCopy : c)),
+              copies: (b.copies || []).map((c) =>
+                c.id === copyId ? updatedCopy : c
+              ),
             }
           : b
       );
@@ -389,25 +404,20 @@ export default function CollectionPage() {
 
   const openEditBookModal = (book: Book) => {
     setEditingBook(book);
+
+    // Ensure book.binding is one of the VALID_BINDINGS, otherwise default to 'other'
+    const safeBinding: BindingType = VALID_BINDINGS.includes(
+      book.binding as BindingType
+    )
+      ? (book.binding as BindingType)
+      : "other";
+
     setInitialBookData({
       title: book.title,
       authors: book.authors,
       publishedYear: book.year,
       publisher: book.publisher,
-      binding: (
-        [
-          "Hardcover",
-          "Paperback",
-          "Trade PB/Uk-B",
-          "Mass Market/UK-A",
-          "UK-C",
-          "Oversize/Softcover",
-          "specialty binding",
-          "other",
-        ] as const
-      ).includes(book.binding)
-        ? book.binding
-        : "other",
+      binding: safeBinding, // Use the safely determined binding
       isbn: book.isbn,
       coverUrl: book.coverUrl, // Use camelCase property
     });
@@ -443,7 +453,12 @@ export default function CollectionPage() {
 
       try {
         // Pass only id and sortIndex for update
-        await updateBookOrder(booksWithNewSortIndex.map(b => ({ id: b.id, sortIndex: b.sortIndex })));
+        await updateBookOrder(
+          booksWithNewSortIndex.map((b) => ({
+            id: b.id,
+            sortIndex: b.sortIndex,
+          }))
+        );
       } catch (error) {
         console.error("Failed to update book order:", error);
         toast({
@@ -552,9 +567,7 @@ export default function CollectionPage() {
               </p>
               <div className="mt-2 flex flex-col gap-y-1 text-xs text-muted-foreground">
                 <span className="truncate">
-                  {Array.isArray(book.authors)
-                    ? book.authors.join(", ")
-                    : ""}
+                  {Array.isArray(book.authors) ? book.authors.join(", ") : ""}
                 </span>
                 <span className="truncate">{book.publisher || "N/A"}</span>
                 <div className="flex flex-wrap items-center gap-x-2">
