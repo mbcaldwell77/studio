@@ -523,6 +523,7 @@ export default function CollectionPage() {
         data: { type: "book" },
         disabled: !isManualSort,
       });
+    // Replace inline style with Tailwind classes
     const style = { transform: CSS.Transform.toString(transform), transition };
 
     return (
@@ -684,6 +685,7 @@ export default function CollectionPage() {
   function SortableCopyItem({ book, copy }: { book: Book; copy: Copy }) {
     const { attributes, listeners, setNodeRef, transform, transition } =
       useSortable({ id: copy.id, data: { type: "copy", bookId: book.id } });
+    // Replace inline style with Tailwind classes
     const style = { transform: CSS.Transform.toString(transform), transition };
 
     const financialMetrics = useMemo(() => {
