@@ -17,4 +17,4 @@ export function middleware(request: NextRequest) {
 // Enable middleware for all API routes and server actions
 export const config = {
   matcher: ['/api/:path*', '/_next/data/:path*'],
-};
+}
